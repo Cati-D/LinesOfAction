@@ -3,6 +3,7 @@ import operator
 import pygame
 from copy import deepcopy
 import time
+import math
 
 # dimensiunile
 WIDTH, HEIGHT = 800, 800
@@ -36,6 +37,7 @@ class Board:
         self.piece_yellow = []
         self.init_array()
         self.direction = [(-1, -1), (-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1)]
+        self.nb_moves_brown = self.nb_moves_yellow = 0
 
     def init_array(self):
         for column in range(1, 7):
@@ -53,12 +55,114 @@ class Board:
             pygame.draw.lines(window, BLACK, True,
                               ((row * SQUARE_SIZE, 0), (row * SQUARE_SIZE, column * SQUARE_SIZE)))  # desenare coloane
 
-    # functie de calcul a scorului jocului
-    def evaluate(self):
-        return 20
+    ################################################ EVALUATE #######################################################
 
-    def alternate_evaluate(self):
-        return 20
+    # pentru a alege ce mutari sa faca, voi merge pe "pedepse" si recompense
+    # am ales ca algoritmul sa icnerce sa formeze o componenta conexa pe centrul tabeli pentru piesele maro
+    # daca o mutare e destinata sa departeze piesele maro, atunci ofer o pedeapsa
+    # daca sunt mai multe piese care nu se afla in componenta conexa de la centru, ofer pedeapsa
+    # ofer o pedeapsa in functie de cat de mic este numrul de piese ramase, pedeapsa crescand invers proportional cu numarul de piese ramase
+    def evaluate(self):
+        if self.winner_yellow():
+            return -10000 # daca ar trebui sa castige galbenul, pedepsesc aiul
+        elif self.winner_brown():
+            return 10000 # daca am gasit o mutare castigatoare, ii dau un imbold aiului sa aleaga mutarea respectiva
+
+        return - self.distance_between_pieces(BROWN) - self.no_neconex_left(self.to_center(BROWN)) - 2 ** self.to_attack(BROWN)
+
+    # calculez numarul de piese ramase pe tabla ale adversarului
+    # daca adv are piese intre 12 si 10, sunt intr-un mediu ok, nu mi influenteaza asa de mult alegerile
+    # daca am piese intre 9 si 6, creste pedeaspa, dat fiind ca acum adversarul are mai putine piese de unit
+    # daca am mai putin de 5 piese, deja pedeapsa are valoarea cea mai mare data fiind complexitatea scazuta de formare a unei componente conexe din 4 piese
+    def to_attack(self, color):
+        if color == BROWN:
+            if self.yellow_left >= 10:
+                return 1
+            elif self.yellow_left >= 5:
+                return 2
+            else:
+                return 3
+        else:
+            if self.brown_left >= 10:
+                return 1
+            elif self.brown_left >= 5:
+                return 2
+            else:
+                return 3
+
+    # calculez distanta dintre piese,  cu cat este mai mic, e mai bine
+    def distance_between_pieces(self, color):
+        if color == BROWN:
+            self.piece_brown.sort(key=operator.itemgetter(0))
+            min_x = self.piece_brown[0][0]
+            max_x = self.piece_brown[-1][0]
+            self.piece_brown.sort(key=operator.itemgetter(1))
+            min_y = self.piece_brown[0][1]
+            max_y = self.piece_brown[-1][1]
+            return (max_x - min_x) + (max_y - min_y)
+        elif color == YELLOW:
+            self.piece_yellow.sort(key=operator.itemgetter(0))
+            min_x = self.piece_yellow[0][0]
+            max_x = self.piece_yellow[-1][0]
+            self.piece_yellow.sort(key=operator.itemgetter(1))
+            min_y = self.piece_yellow[0][1]
+            max_y = self.piece_yellow[-1][1]
+            return (max_x - min_x) + (max_y - min_y)
+
+    # distanta dintre centru tablei si centrul piesei mele
+    def distance_to_centre(self, piece):
+        return (abs(3.5 - piece.row) + abs(3.5 - piece.column)) / 2
+
+    # functie piese conexe - piese ramase neconexe
+    def no_neconex_left(self, piece):
+        n = self.DFS(piece.row, piece.column, piece.color) # numarul de piese conexe cu piesa mea
+        if piece.color == BROWN:
+            return self.brown_left - n
+        elif piece.color == YELLOW:
+            return self.yellow_left - n
+
+    # functie auxiliara, ca param o culoare si calculeaza din lista de piese de culoare care are cea mai mica distanta pana la centru
+    def to_center(self, color):
+        v = self.get_all_pieces(color)
+        min = 2000
+        for i in v:
+            if self.distance_to_centre(i) < min:
+                min = self.distance_to_centre(i)
+                pair = i
+        return pair # returnez perechea cu dist minima
+
+    ############################################ ALTERNATE EVALUATE ####################################################
+
+    # si aici am ales sa functionez pe acelasi principiu, pedeaspa si recompensa
+    # de data aceasta, in timp ce maroul incearca sa creeze o componenta conexa in centru, galbenul incearca sa cucereasca piesele maro din componentele conexe, care sunt cat mai apropiate de centru
+    # ofer pedeapsa daca piesele galbele sunt mai mult departate
+    # ofer recompensa pentru distrugerea unei componente conexe
+    # ofer pedeapsa pentru putine piese maro ramase, pe principiul functiei de evaluare anterioare
+    # ofer pedeapsa daca ma aflu la distanta mare fata de centru pentru ca scad sansele de a cuceri componentele maro
+    def alternate_evaluate(self): # pt galben
+        if self.winner_brown():
+            return -100000
+        elif self.winner_yellow():
+            return 100000 # recompensa daca se preconizeaza o mutare princ are galbenul ar putea castiga
+
+        #1.5 e agresiv, nu vreau sa foloseasca doar o piesa si sa le mute pe celalalte
+        # 3 ca sa ii cresc agresivitatea si sa l incurajez sa distruga comp conexa, balansez cu fapt ca e posibil sa scot o care produce daune mai mari in componenta conexa
+        # - 3 ** jucand mai agresiv, vreau sa i dau o pedepsa mai mare cand are mai putine piese ca deja ma afecteaza
+        # -2 ii dau indicii sa se mute spre centru, il fortez sa si adune piesele, llegata de prima functie apelata
+        return - (self.distance_between_pieces(YELLOW) * 1.5) + (self.no_neconex_left(self.to_center(BROWN)) * 3) - (3 ** self.to_attack(YELLOW)) - (2 * self.distance_to_centre(self.max_to_center(YELLOW)))
+
+    # returnez perechea de dist maxima fata de centru
+    def max_to_center(self, color):
+        v = self.get_all_pieces(color)
+        pair = self.board[3][3]
+        max = 0
+        for i in v:
+            if self.distance_to_centre(i) > max:
+                max = self.distance_to_centre(i)
+                pair = i
+        return pair  # returnez perechea cu dist maxima
+
+    ####################################################################################################################
 
     def move_piece(self, piece, row, column):
         if self.valid(row, column):
@@ -66,12 +170,14 @@ class Board:
             cpy1, cpy2 = piece.row, piece.column
             # elimin din vectorii de pozitii piesele care sunt cucerite si actualizez noua pozitie a pieselor
             if piece.color == BROWN:
+                self.nb_moves_brown += 1
                 self.piece_brown.remove((cpy1, cpy2))
                 self.piece_brown.append((row, column))
                 # print(self.board[row][column])
                 # if self.board[row][column] == YELLOW:
                 #     self.piece_yellow.remove((row, column))
             if piece.color == YELLOW:
+                self.nb_moves_yellow += 1
                 self.piece_yellow.remove((cpy1, cpy2))
                 self.piece_yellow.append((row, column))
                 # if self.board[row][column] == BROWN:
@@ -289,6 +395,7 @@ class Board:
             return BROWN
         # retin pozitiile aparitiilor primelor piese pe tabla de joc
         self.piece_brown.sort(key=operator.itemgetter(0))
+        # if ()
         first_brown_piece = self.piece_brown[0]
 
         brown_connected = self.DFS(first_brown_piece[0], first_brown_piece[1], BROWN)
@@ -655,6 +762,11 @@ def main_players():
                 game.select_piece(row, column)
 
         game.update_display()
+
+    # afisari pe ecran
+    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
+    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
+
     pygame.quit()
 
 
@@ -767,6 +879,11 @@ def main(depth):
                 game.select_piece(row, column)
 
         game.update_display()
+
+    # afisari pe ecran
+    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
+    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
+
     pygame.quit()
 
 
@@ -803,8 +920,12 @@ def main_ai(depth):
                 row, column = get_coordinate_from_mouse(position)
                 game.select_piece(row, column)
         game.update_display()
-    pygame.quit()
 
+    # afisari pe ecran
+    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
+    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
+
+    pygame.quit()
 
 # mainuri minmaxx
 def main_ai1():
@@ -870,8 +991,12 @@ def main_ai_alpha(depth):
                 row, column = get_coordinate_from_mouse(position)
                 game.select_piece(row, column)
         game.update_display()
-    pygame.quit()
 
+    # afisari pe ecran
+    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
+    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
+
+    pygame.quit()
 
 def algmalphabeta():
     intro = True
