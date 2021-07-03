@@ -1,2 +1,2 @@
 # LinesOfAction
-Make evaluate and alternate_evaluate
+Implementation for game Lines of Action
