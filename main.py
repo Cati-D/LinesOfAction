@@ -359,9 +359,110 @@ class Board:
 
     def valid_move(self, i, j, piece):
         if i < 0 or i > ROWS - 1 or j < 0 or j > COLUMNS - 1 or (
-                self.board[i][j] != 0 and piece.color == self.board[i][j].color):
+                self.board[i][j] != 0 and piece.color == self.board[i][j].color) or self.cale_libera(i, j, piece, self.directie(i, j, piece)) == False:
             return None
         return i, j
+
+    # functie care imi da directia de mutare ca string
+    def directie(self, i, j, piece):
+        if piece.row == i:
+            if piece.column > j:
+                return "linieDreapta"
+            else:
+                return "linieStanga"
+        elif piece.column == j:
+            if piece.row > i:
+                return "coloanaSus"
+            else:
+                return "coloanaJos"
+        elif i - j == piece.row - piece.column:
+            if i < piece.row:
+                return "diagonalaPrincipalaSus"
+            else:
+                return "diagonalaPrincipalaJos"
+        else:
+            if i < piece.row:
+                return "diagonalaSecundaraSus"
+            else:
+                return "diagonalaSecundaraJos"
+
+    # functie care imi verifica daca trebuie sa sar peste piese adversare in mutarea mea
+    def cale_libera(self, i, j, piece, directie):
+        if piece.color == BROWN:
+            if directie == "linieDreapta":
+                for piesa in self.piece_yellow:
+                    if piesa[0] == piece.row and piece.column < piesa[1] < j:
+                        return False
+            if directie == "linieStanga":
+                for piesa in self.piece_yellow:
+                    if piesa[0] == piece.row and piece.column > piesa[1] > j:
+                        return False
+            if directie == "coloanaSus":
+                for piesa in self.piece_yellow:
+                    if piesa[1] == piece.column and i < piesa[0] < piece.row:
+                        return False
+            if directie == "coloanaJos":
+                for piesa in self.piece_yellow:
+                    if piesa[1] == piece.column and i > piesa[0] > piece.row:
+                        return False
+            if directie == "diagonalaSecundaraSus":
+                for piesa in self.piece_yellow:
+                    if piesa[0] + piesa[1] == piece.row + piece.column and piece.row > piesa[
+                        0] > i and piece.column < piesa[1] < j:
+                        return False
+            if directie == "diagonalaSecundaraJos":
+                for piesa in self.piece_yellow:
+                    if piesa[0] + piesa[1] == piece.row + piece.column and piece.row < piesa[
+                        0] < i and piece.column > piesa[1] > j:
+                        return False
+            if directie == "diagonalaPrincipalaSus":
+                for piesa in self.piece_yellow:
+                    if piesa[0] - piesa[1] == piece.row - piece.column and piece.row > piesa[
+                        0] > i and piece.column > piesa[1] > j:
+                        return False
+            if directie == "diagonalaPrincipalaJos":
+                for piesa in self.piece_yellow:
+                    if piesa[0] - piesa[1] == piece.row - piece.column and piece.row < piesa[
+                        0] < i and piece.column < piesa[1] < j:
+                        return False
+        else:
+            if directie == "linieDreapta":
+                for piesa in self.piece_brown:
+                    if piesa[0] == piece.row and piece.column < piesa[1] < j:
+                        return False
+            if directie == "linieStanga":
+                for piesa in self.piece_brown:
+                    if piesa[0] == piece.row and piece.column > piesa[1] > j:
+                        return False
+            if directie == "coloanaSus":
+                for piesa in self.piece_brown:
+                    if piesa[1] == piece.column and i < piesa[0] < piece.row:
+                        return False
+            if directie == "coloanaJos":
+                for piesa in self.piece_brown:
+                    if piesa[1] == piece.column and i > piesa[0] > piece.row:
+                        return False
+            if directie == "diagonalaSecundaraSus":
+                for piesa in self.piece_brown:
+                    if piesa[0] + piesa[1] == piece.row + piece.column and piece.row > piesa[
+                        0] > i and piece.column < piesa[1] < j:
+                        return False
+            if directie == "diagonalaSecundaraJos":
+                for piesa in self.piece_brown:
+                    if piesa[0] + piesa[1] == piece.row + piece.column and piece.row < piesa[
+                        0] < i and piece.column > piesa[1] > j:
+                        return False
+            if directie == "diagonalaPrincipalaSus":
+                for piesa in self.piece_brown:
+                    if piesa[0] - piesa[1] == piece.row - piece.column and piece.row > piesa[
+                        0] > i and piece.column > piesa[1] > j:
+                        return False
+            if directie == "diagonalaPrincipalaJos":
+                for piesa in self.piece_brown:
+                    if piesa[0] - piesa[1] == piece.row - piece.column and piece.row < piesa[
+                        0] < i and piece.column < piesa[1] < j:
+                        return False
+        return True
 
     def remove(self, row, column):  # scad nr de piese
         if self.valid(row, column):
@@ -374,8 +475,11 @@ class Board:
             pass
 
     def winner(self):
-        if self.winner_brown() is None and self.winner_yellow() is None:
-            return None
+        if self.winner_brown() is not None:
+            return self.winner_brown()
+        elif self.winner_yellow() is not None:
+            return self.winner_yellow()
+        return None
 
     def winner_yellow(self):
         if self.yellow_left == 1:
@@ -395,7 +499,6 @@ class Board:
             return BROWN
         # retin pozitiile aparitiilor primelor piese pe tabla de joc
         self.piece_brown.sort(key=operator.itemgetter(0))
-        # if ()
         first_brown_piece = self.piece_brown[0]
 
         brown_connected = self.DFS(first_brown_piece[0], first_brown_piece[1], BROWN)
@@ -423,20 +526,6 @@ class Board:
                     visited.add((dx, dy))
                     stack.append((dx, dy))
         return connected_piece
-
-    #     if self.verify_neighbor(self.board[self.piece_brown[0][0]][self.piece_brown[0][1]]):
-    #         return BROWN
-    #     if self.verify_neighbor(self.board[self.piece_yellow[0][0]][self.piece_yellow[0][1]]):
-    #         return YELLOW
-    #
-    # def verify_neighbor(self, piece): # verific ca oricare piesa sa aiba vecini de aceeasi culoare
-    #     if piece.color == BROWN:
-    #         if ((piece.row - 1, piece.column) in self.piece_brown) or ((piece.row - 1, piece.column - 1) in self.piece_brown) or ((piece.row - 1, piece.column + 1) in self.piece_brown) or ((piece.row, piece.column - 1) in self.piece_brown) or ((piece.row, piece.column + 1) in self.piece_brown) or ((piece.row + 1, piece.column) in self.piece_brown) or ((piece.row + 1, piece.column - 1) in self.piece_brown) or ((piece.row + 1, piece.column + 1) in self.piece_brown):
-    #             return False
-    #     if piece.color == YELLOW:
-    #         if ((piece.row - 1, piece.column) in self.piece_yellow) or ((piece.row - 1, piece.column - 1) in self.piece_yellow) or ((piece.row - 1, piece.column + 1) in self.piece_yellow) or ((piece.row, piece.column - 1) in self.piece_yellow) or ((piece.row, piece.column + 1) in self.piece_yellow) or ((piece.row + 1, piece.column) in self.piece_yellow) or ((piece.row + 1, piece.column - 1) in self.piece_yellow) or ((piece.row + 1, piece.column + 1) in self.piece_yellow):
-    #             return False
-    #     return True
 
 
 class Pieces:
@@ -638,7 +727,7 @@ def minmax(current_board, depth, player_choice):
     :param player_choice: bool care verifica daca jucatorul a ales min sau max
     """
 
-    if depth == 0 or current_board.winner() is not None:
+    if depth == 0 or current_board.winner() != None:
         return current_board.evaluate(), current_board
 
     if player_choice:
@@ -666,7 +755,7 @@ def minmax_yellow(current_board, depth, player_choice):
     :param depth: adancimea arborelui
     :param player_choice: bool care verifica daca jucatorul a ales min sau max
     """
-    if depth == 0 or current_board.winner() is not None:
+    if depth == 0 or current_board.winner() != None:
         return current_board.evaluate(), current_board
 
     if player_choice:
@@ -691,7 +780,7 @@ def minmax_yellow(current_board, depth, player_choice):
 
 # alpha-beta
 def alpha_beta_brown(alpha, beta, table, depth, player_choice):
-    if depth == 0 or table.winner() is not None:
+    if depth == 0 or table.winner() != None:
         return table.alternate_evaluate(), table
 
     if alpha > beta:
@@ -865,20 +954,24 @@ def main(depth):
     while run:
         clock.tick(60)
 
-        if game.turn == BROWN:
-            value, new_board = minmax(game.get_board(), depth, True)
-            game.ai_move(new_board)
+        if game.board.winner() is None:
+            if game.turn == BROWN:
+                value, new_board = minmax(game.get_board(), depth, True)
+                game.ai_move(new_board)
 
-        # verificam daca alegem sa inchidem fereastra
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                position = pygame.mouse.get_pos()
-                row, column = get_coordinate_from_mouse(position)
-                game.select_piece(row, column)
+            # verificam daca alegem sa inchidem fereastra
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    position = pygame.mouse.get_pos()
+                    row, column = get_coordinate_from_mouse(position)
+                    game.select_piece(row, column)
 
-        game.update_display()
+            game.update_display()
+        else:
+            pygame.init()
+            game.update_display()
 
     # afisari pe ecran
     print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
@@ -905,25 +998,29 @@ def main_ai(depth):
     while run:
         clock.tick(60)
 
-        if game.turn == BROWN:
-            value, new_board = minmax(game.get_board(), depth, True)
-            game.ai_move(new_board)
-        else:
-            value, new_board = minmax_yellow(game.get_board(), depth, True)
-            game.ai_move(new_board)
+        if game.board.winner() is None:
+            if game.turn == BROWN:
+                value, new_board = minmax(game.get_board(), depth, True)
+                game.ai_move(new_board)
+            else:
+                value, new_board = minmax_yellow(game.get_board(), depth, True)
+                game.ai_move(new_board)
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                position = pygame.mouse.get_pos()
-                row, column = get_coordinate_from_mouse(position)
-                game.select_piece(row, column)
-        game.update_display()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    position = pygame.mouse.get_pos()
+                    row, column = get_coordinate_from_mouse(position)
+                    game.select_piece(row, column)
+            game.update_display()
+        else:
+            pygame.init()
+            game.update_display()
 
     # afisari pe ecran
-    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
-    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
+    # print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
+    # print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
 
     pygame.quit()
 
@@ -976,26 +1073,25 @@ def main_ai_alpha(depth):
     pygame.init()
     while run:
         clock.tick(60)
-        if game.turn == BROWN:
-            value, new_board = minmax_yellow(game.get_board(), depth, True)
-            game.ai_move(new_board)
+        if game.board.winner() is None:
+            if game.turn == BROWN:
+                value, new_board = minmax_yellow(game.get_board(), depth, True)
+                game.ai_move(new_board)
+            else:
+                value, new_board = alpha_beta_brown(0, 0, game.get_board(), depth, True)
+                game.ai_move(new_board)
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    position = pygame.mouse.get_pos()
+                    row, column = get_coordinate_from_mouse(position)
+                    game.select_piece(row, column)
+            game.update_display()
         else:
-            value, new_board = alpha_beta_brown(0, 0, game.get_board(), depth, True)
-            game.ai_move(new_board)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                position = pygame.mouse.get_pos()
-                row, column = get_coordinate_from_mouse(position)
-                game.select_piece(row, column)
-        game.update_display()
-
-    # afisari pe ecran
-    print("Numar de mutari jucator maro: ", game.board.nb_moves_brown)
-    print("Numar de mutari jucator galgen: ", game.board.nb_moves_yellow)
-
+            pygame.init()
+            game.update_display()
     pygame.quit()
 
 def algmalphabeta():
