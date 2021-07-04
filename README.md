@@ -1,6 +1,4 @@
 # LinesOfAction
-Implementation for game Lines of Action
-
 
 This project is a game, Lines of Action.
 
