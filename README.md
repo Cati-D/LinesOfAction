@@ -18,11 +18,13 @@ Startegy
 The game can become quite tactical in open positions where the checkers on both sides are mobile. The strategic depth of the game, however, derives to a large extent from blocking strategies designed to limit the opponent's mobility. It can be advantageous to pin one or more enemy checkers against the side of board by moving in the second row or column.
 Having more checkers is usually an advantage, because they can limit the opponent's options as they mass together. On the other hand, material considerations are not all-important, because having fewer checkers also means having fewer to unite.
 
-Firsty, on menu page, you can select the a;lgorithm you wanna use:
+Firsty, on menu page, you can select the algorithm you wanna use:
 - Minmax (https://en.wikipedia.org/wiki/Minimax)
 - Alpha-Beta (https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning)
 Then, you have a menu where you choose the way you wanna play:
 - Player vs. Player
 - Player vs. AI
 - AI vs. AI
-Finnaly, you can chosee level of dificulty if you choose to play with an AI or choose the two AI play.
+Finnaly, you can chosee the level of dificulty if you choose to play with an AI or choose the two AI play.
+
+This game has elements from tutorials from youtube channel: https://www.youtube.com/c/TechWithTim/videos
